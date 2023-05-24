@@ -146,7 +146,7 @@ public class NineSymmetry {
         return "[" + listintegerToStringClean(numbers, sep) + "]";            
     }
     public static String listintegerToStringClean(List<Integer> numbers, String sep) {
-        return String.join(sep,  numbers.stream().map(String::valueOf).collect(Collectors.toList())) + "]";
+        return String.join(sep,  numbers.stream().map(String::valueOf).collect(Collectors.toList()));
     }
     
     public Map<String, Transformer> computeAllUnique() {

@@ -179,5 +179,9 @@ public class Game {
          System.out.println(this.board.toStringState());
      }
 
+    public CellValue getCurrentPlayer() {
+        return currentPlayer;
+    }
+
 
 }
