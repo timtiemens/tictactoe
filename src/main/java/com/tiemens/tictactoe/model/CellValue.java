@@ -30,5 +30,9 @@ public enum CellValue {
     public String toString() {
         return symbol;
     }
+
+    public String getSymbol() {
+        return symbol;
+    }
    
 }

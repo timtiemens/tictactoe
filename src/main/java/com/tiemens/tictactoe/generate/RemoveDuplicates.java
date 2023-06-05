@@ -11,11 +11,15 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BinaryOperator;
+import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
 import com.tiemens.tictactoe.math.NineSymmetry;
 import com.tiemens.tictactoe.math.NineSymmetry.Transformer;
@@ -38,7 +42,9 @@ public class RemoveDuplicates {
         new File(outdir).mkdirs();
         writeUniqueToFilename(outfilepath, data);
         
-        writeDetailUniqueToDirectory(outdir + "/" + "details", data);
+        writeDetailUniqueToDirectory(outdir + "/" + "detailsremovedupes",
+                                     outdir + "/" + "detailsremovedupesNines",
+                                     data);
 
     }
     
@@ -99,7 +105,6 @@ public class RemoveDuplicates {
         
         System.out.println("Uniquestring2line.keys().size=" + uniquestring2line.keySet().size());
          
-        // logf" nine[0][0]={ninearrays[0][0]}")   # prints  "b"
         List<String> keep_lines = new ArrayList<>();
         Map<String, List<String>> seen_keys_to_replaced_keys = new HashMap<>();
         List<String> key_list = new ArrayList<>(uniquestring2line.keySet());
@@ -147,7 +152,7 @@ public class RemoveDuplicates {
                                  uniquestring2originalline); 
     }
 
-    private void writeDetailUniqueToDirectory(String outdirectory, ProcessedData data) {
+    private void writeDetailUniqueToDirectory(String outdirectory, String outNinesDirectory, ProcessedData data) {
         String header = data.header;
         List<String> key_list = data.key_list;
         Map<String, String> uniquestring2line = data.uniquestring2line;
@@ -165,6 +170,17 @@ public class RemoveDuplicates {
         }
         System.out.println("OutDirectory " + outdirectory + " deleted " + countDelete + " files");
         
+        final File outdirNinesFile = new File(outNinesDirectory);
+        outdirNinesFile.mkdirs();
+        countDelete = 0;
+        for (File file : outdirNinesFile.listFiles()) {
+            if (! file.isDirectory()) {
+                file.delete();
+                countDelete++;
+            }
+        }
+        System.out.println("OutDirectory " + outdirectory + " deleted " + countDelete + " files");
+        
         System.out.println("Begin processing keys->replacedkeys size=" + seen_keys_to_replaced_keys.keySet().size());
         //for (String key : seen_keys_to_replaced_keys.keySet()) {
         for (String key : key_list) {
@@ -174,38 +190,72 @@ public class RemoveDuplicates {
                 writeDetailsToFilename(outdirFile, 
                                        key, 
                                        seen_keys_to_replaced_keys.get(key),
-                                       uniquestring2originalline);
+                                       uniquestring2originalline,
+                                       identity);
+                
+                writeDetailsToFilename(outdirNinesFile,
+                                       key, 
+                                       seen_keys_to_replaced_keys.get(key), 
+                                       uniquestring2originalline,
+                                       changetoNinechars);
+                
+                Consumer<String> c;
             } else {
                 System.out.println(" detail write skipping key " + key);
             }
         }        
         
     }
+    
+    private UnaryOperator<String> identity = (String text) -> { return text;} ;
+        
+    
+    private UnaryOperator<String> changetoNinechars = (String s) -> {
+        String ret = s;
+        s = s.replace("positive", "");
+        s = s.replace("negative", "");
+        s = s.replace("\"", "");
+        s = s.replace(",", "");
+        return s;
+    };
 
     // create a file named "key" with the contents being the replaced keys converted to their original lines
     private void writeDetailsToFilename(File outdirFile, 
                                         String key,  
                                         List<String> replaced_keys,
-                                        Map<String, String> uniquestring2originalline) {
-        boolean first = true;
+                                        Map<String, String> uniquestring2originalline,
+                                        UnaryOperator<String> operator) {
+        String firstLine = null;
         String outfilename = new File(outdirFile, key).toString();
-        
-        try (FileWriter writer = new FileWriter(outfilename)) {
-            if (first) {
-                if ((replaced_keys == null) || (replaced_keys.size() == 0) || (! replaced_keys.contains(key))) {
-                    // place "our" original line at the top of this file:
-                    writer.write(uniquestring2originalline.get(key) + "\n");
-                }
-                first = false;
+     
+        // Build all of the output lines:
+        List<String> outlines = new ArrayList<>();
+        if ((replaced_keys == null) || (replaced_keys.size() == 0) || (! replaced_keys.contains(key))) {
+            firstLine = operator.apply(uniquestring2originalline.get(key)) + "\n";
+            outlines.add(firstLine);
+        }
+        for (String replacedKey : replaced_keys) {
+            String originalline = uniquestring2originalline.get(replacedKey);
+            if (originalline != null) {
+                outlines.add(operator.apply(uniquestring2originalline.get(replacedKey)) + "\n");
+            } else { 
+                throw new RuntimeException("failed original for replacedKey='" + replacedKey + "'");
             }
-            for (String replacedKey : replaced_keys) {
-                String originalline = uniquestring2originalline.get(replacedKey);
-                if (originalline != null) {
-                    writer.write(uniquestring2originalline.get(replacedKey) + "\n");
-                } else { 
-                    throw new RuntimeException("failed original for replacedKey='" + replacedKey + "'");
-                }
-                
+        }
+        
+        // sort:
+        Collections.sort(outlines);
+        
+        if (! outlines.get(0).equals(firstLine)) {
+            
+        } else {
+            System.out.println(" ----   firstline is the same after sort");
+        }
+        
+        // Write all of the (sorted) output lines:
+        try (FileWriter writer = new FileWriter(outfilename)) {
+            for (String line : outlines) {
+                writer.write(line);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -262,8 +312,8 @@ public class RemoveDuplicates {
 
     /**
      * 
-     * @param key is "0","1",...,"8"   i.e. comma-separated, but still a simple string
-     * @return
+     * @param key is "012345678"   i.e. simple string, length 9
+     * @return List<"0","1",...,"8">  size 9   i.e. comma-separated, but still a simple string
      */
     public List<String> cvtToNinearray(String key) {
         List<String> ret = new ArrayList<>();

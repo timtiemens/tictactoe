@@ -83,6 +83,12 @@ class BoardTest {
     // # end of original unit tests
     // # start of symmetry unit tests
 
+    //
+    // list comprehension
+    // List<String> board_array_quotes = board_array.stream().map(quote + Object::toString + quote).collect(Collectors.toList());
+    // works List<String> board_array_quotes = board_array.stream().map(Object::toString).collect(Collectors.toList());            
+
+    
     /**
     def test_indexflip(self):
         ninesym = NineSymmetry()

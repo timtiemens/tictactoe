@@ -1,11 +1,13 @@
 package com.tiemens.tictactoe.model;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import com.tiemens.tictactoe.model.Board.KeyTurnIndex;
 import com.tiemens.tictactoe.model.Board.RowCol;
 
 public class Game {
@@ -67,19 +69,18 @@ public class Game {
         this.player2Strategy = new HashMap<>(otherGame.player2Strategy);
     }            
             
-    // TODO: change to factory?
-    public Game(List<Integer> indexArray, CellValue theFirstPlayer, CellValue theSecondPlayer) {       
-        this(theFirstPlayer, theSecondPlayer);
+    public static Game createFromTurnInde(List<Integer> indexArray, CellValue theFirstPlayer, CellValue theSecondPlayer) {
+        Game ret = new Game(theFirstPlayer, theSecondPlayer);
         for (Integer index : indexArray) {
-            if (this.getGameWinner() == null) {
-                //r = int( index / 3 )
-                //c = index - (r * 3)
-                this.playerMakesMove(index, this.currentPlayer);  
+            if (ret.getGameWinner() == null) {
+                
+                ret.playerMakesMove(index, ret.currentPlayer);  
                 // currentPlayer has been updated
             } else {
                 throw new RuntimeException("Create game index={index} game winner already {game.get_game_winner()}");
             }
          }
+        return ret;
      }
     
     public static void setRandomSeed(long seed) {
@@ -181,6 +182,25 @@ public class Game {
 
     public CellValue getCurrentPlayer() {
         return currentPlayer;
+    }
+
+    public String toKaggleCsvLine() {
+        String quote = "\"";
+        
+        // List<> of 9 CellValues and 1 String
+        List<Object> board_array = getBoard().toBoardStateKaggleCsv(CellValue.X);
+        
+        List<String> board_array_quotes = new ArrayList<>();
+        // surround with "s
+        board_array.forEach( item -> board_array_quotes.add(quote + item.toString() + quote));
+        // combine with ","
+        String line = String.join(",", board_array_quotes);
+        
+        line = line.replace("-", "b");
+        line = line.replace("none", "negative");
+
+        // TODO Auto-generated method stub
+        return line;
     }
 
 

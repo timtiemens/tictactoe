@@ -121,22 +121,29 @@ public class Board {
     }
 
     private static List<Set<Integer>> allWinningIndexSets = createAllSetsWinningIndexes3x3();
+    
     private List<CellValue> cellList;
+    private List<Integer> turns = new ArrayList<>();
     
     public Board() {
         this(List.of(CellValue.EMPTY, CellValue.EMPTY, CellValue.EMPTY,
                      CellValue.EMPTY, CellValue.EMPTY, CellValue.EMPTY,
-                     CellValue.EMPTY, CellValue.EMPTY, CellValue.EMPTY));
+                     CellValue.EMPTY, CellValue.EMPTY, CellValue.EMPTY),
+                new ArrayList<Integer>());
     }
     public Board(Board other) {
-        this(other.cellList);
+        this(other.cellList, other.turns);
     }
-    public Board(List<CellValue> cellList) {
+    public Board(List<CellValue> cellList, List<Integer> turns) {
         if (cellList.size() != BOARD_SIZE) {
             throw new RuntimeException("list size must be " + BOARD_SIZE + " but was " + cellList.size());
         }
         this.cellList = new ArrayList<>(cellList);
+        this.turns = new ArrayList<>(turns);
     }
+    
+    
+    
     public static List<Set<Integer>> getAllWinningIndexSets() {
         return allWinningIndexSets;
     }
@@ -167,20 +174,43 @@ public class Board {
         }
     }
     public String toStringState() {
+        return toStringState(" ", "\n");
+    }
+    public String toStringStateSingleLine() {
+        return toStringState("", "");
+    }
+    public String toStringState(String separator, String newline) {
         StringBuilder sb = new StringBuilder();
         for (int r = 0; r < NUM_ROWS; r++) {
             String sep = "";
             for (int c = 0; c < NUM_COLS; c++) {
                 sb.append(sep);
                 sb.append(getCellRowCol(r, c));
-                sep = " ";
+                sep = separator;
             }
-            sb.append("\n");
+            sb.append(newline);
+        }
+        return sb.toString();
+    }
+    
+    public String toStringTurnsSingleLine() {
+        StringBuilder sb = new StringBuilder();
+        for (Integer turn : turns) {
+            sb.append("" + turn);
+        }
+        for (int i = 0, n = 9 - turns.size(); i < n; i++) {
+            sb.append(".");
         }
         return sb.toString();
     }
 
-    public List<Object> toBoardArray(CellValue positiveForPlayer) {
+    /**
+     * 
+     * @param positiveForPlayer
+     * @return Array that matches Kaggle data format V1,V2,...V9,V10
+     *          where V10 is "positive" or "negative"
+     */
+    public List<Object> toBoardStateKaggleCsv(CellValue positiveForPlayer) {
         if (positiveForPlayer == null) {
             positiveForPlayer = CellValue.X;
         }
@@ -214,7 +244,13 @@ public class Board {
     }
     
     public void setCellRowCol(RowCol rowcol, CellValue cellValue) {
-        cellList.set(rowcol.getIndex(), cellValue);
+        int index = rowcol.getIndex();
+        recordTurn(index);
+        cellList.set(index, cellValue);
+    }
+    private void recordTurn(int index) {
+        turns.add(index);
+        
     }
     //public void setCell(int row, int col, CellValue cellvalue) {
     //    cellList[RowCol.lookup(row, col).getIndex()] = cellvalue;
@@ -447,7 +483,10 @@ public class Board {
         for (Set<CellValue> candidateSet : all_sets) {
             if (! candidateSet.contains(CellValue.EMPTY)) {
                 if (candidateSet.size() == 1) {
-                    winner = candidateSet.toArray(new CellValue[0])[0];
+                    // when candidateSet is size 1 AND it is not EMPTY,
+                    //   then either X or O has won.
+                    //    so, "get the first/only" element of the set:
+                    winner = candidateSet.iterator().next();
                     break;
                 }
             }
@@ -557,7 +596,97 @@ public class Board {
 
         strategy_log("ERROR: Programmer error");
         return null;
-      }
+    }
+    
+    
+    // Type-define wrappers for "String" - there are two "Key" string formats being used:
+    // 1)  "board-state"  aka  xoxoxoxox
+    // 2)  "turn-index"   aka  652183074
+    // Having these classes means "Map<String, List<Game>>" turns into "Map<KeyBoardState, List<Game>>"
+    //   so you can tell which kind of key was used
+    // (Note that 95% of these classes is generated boiler-plate code.)
+    
+    public static class KeyBoardState implements Comparable<KeyBoardState> {
+        private String key;
+
+        public KeyBoardState(String key) {
+            super();
+            this.key = key;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            KeyBoardState other = (KeyBoardState) obj;
+            return Objects.equals(key, other.key);
+        }
+
+        @Override
+        public String toString() {
+            return key;
+        }
+
+        @Override
+        public int compareTo(KeyBoardState other) {
+            return this.toString().compareTo(other.toString());
+        }        
+    } // KeyBoardState
+    
+    public static class KeyTurnIndex {
+        private String key;
+
+        public KeyTurnIndex(String key) {
+            super();
+            this.key = key;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            KeyTurnIndex other = (KeyTurnIndex) obj;
+            return Objects.equals(key, other.key);
+        }
+
+        @Override
+        public String toString() {
+            return key;
+        }        
+    } // KeyBoardState
+    
+    public KeyBoardState getKeyBoardState() {
+        StringBuilder sb = new StringBuilder();
+        for (CellValue cellValue: cellList) {
+            sb.append(cellValue.getSymbol());
+        }
+        return new KeyBoardState(sb.toString());
+    }
+    public KeyTurnIndex getKeyTurnIndex() {
+        StringBuilder sb = new StringBuilder();
+        for (Integer turn : turns) {
+            sb.append("" + turn);
+        }
+        return new KeyTurnIndex(sb.toString());        
+    }
 }
 
     

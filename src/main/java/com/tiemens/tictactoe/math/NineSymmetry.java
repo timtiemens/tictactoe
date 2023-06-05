@@ -1,9 +1,13 @@
 package com.tiemens.tictactoe.math;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 
@@ -202,6 +206,61 @@ public class NineSymmetry {
 
         return ret;
     }
+    
+    /**
+     * Helper method to turn String -> List<String> -> transform -> String
+     * @param transforms list to apply
+     * @param input to apply each transformer -- note: must be length 9 characters
+     * @return List<String>, sorted, as the output of each transform in transforms
+     *           does NOT include the identity transform of input
+     */
+    public List<String> generateSymmetricKeys(Collection<Transformer> transformers, String input) {
+        // 
+        // Hideous bug:  "does NOT include the identity transform" can mean
+        //         1)   do not apply transforms like "Horiz(Horiz(m))" which are "identity transforms"
+        //         2)   do not return results that are exactly equal to the input
+        //
+        // Other bug: "bbboboxxx" would generate [boxbbxbox, boxbbxbox, xobxbbxob, xobxbbxob, xxxobobbb, xxxobobbb]
+        //              i.e. duplicates
+        Set<String> setret = new HashSet<>();
+        List<String> transformerIn = cvtStringToNinearray(input);        
+        for (Transformer transformer : transformers) {
 
+            List<String> transformerOut = new ArrayList<>(transformerIn);
+            transformer.transform(transformerIn, transformerOut);
+            
+            setret.add(cvtNinearrayToString(transformerOut));
+        }
+        // bug/design "fix" :
+        if (setret.contains(input)) {
+            setret.remove(input);
+        }
+
+        List<String> ret = new ArrayList<>(setret);
+        Collections.sort(ret);
+        
+        return ret;
+    }
+
+    public String cvtNinearrayToString(List<String> ninearray) {
+        return String.join("", ninearray);
+    }
+
+    /**
+     * 
+     * @param key is "012345678"   i.e. simple string, length 9
+     * @return List<"0","1",...,"8">  size 9   i.e. comma-separated, but still a simple string
+     */
+    public List<String> cvtStringToNinearray(String string) {
+        List<String> ret = new ArrayList<>();
+        for (int i = 0, n = string.length(); i < n; i++) {
+            ret.add("" + string.charAt(i));
+        }
+        if (ret.size() != 9) {
+            throw new RuntimeException("programmer error on length, key='" + string + "' ret=" + ret);
+        }
+        return ret;
+    }
+    
 }
 
