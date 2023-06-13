@@ -158,13 +158,16 @@ public class DrawBoardImage extends JPanel {
     
     
     DrawBoardModel dbm;
-    public DrawBoardImage(String input) {
+    Font useFont;
+    public DrawBoardImage(String input, int height) {
         if (input == null) {
             input = "XOXOXOXOX";
         } else {
             input = input.toUpperCase();
         }
-        this.dbm = new DrawBoardModel(0, 0, 40, input);
+        this.dbm = new DrawBoardModel(0, 0, height, input);
+        // for height 40:
+        this.useFont = new Font("Courier", Font.PLAIN, 24);
     }
     
     
@@ -177,9 +180,7 @@ public class DrawBoardImage extends JPanel {
     
   public void paintComponent(Graphics g) {
       
-      // for height 40:
-      Font font = new Font("Courier", Font.PLAIN, 24);
-      g.setFont(font);
+      g.setFont(this.useFont);
       
       
       
@@ -241,6 +242,9 @@ public class DrawBoardImage extends JPanel {
       g.drawString(text, x, y);
   }
   
+  
+  public static int SIZE_SMALL = 40;    // ends up 112
+  public static int SIZE_KAGGLE = 100;   // needs 284, so divide by 3 = 90    564x282  564=188
  
   public static void main(String[] args) {
     //JFrame.setDefaultLookAndFeelDecorated(true);
@@ -249,7 +253,7 @@ public class DrawBoardImage extends JPanel {
     //frame.setBackground(Color.white);
     
  
-    DrawBoardImage panel = new DrawBoardImage(null);
+    DrawBoardImage panel = new DrawBoardImage(null, SIZE_SMALL);
     panel.setSize(panel.getPreferredSize());
     //frame.setSize(300, 200);
     //frame.setSize(panel.getPreferredSize());
@@ -263,10 +267,18 @@ public class DrawBoardImage extends JPanel {
     panel.saveImage(new File("build/DrawBoardImage.png"));
     
     List<String> interesting = List.of("ooxxxooxx", "oxoxoxxox", "oxxxooxox");
+    int size;
+    String sizeExtraName;
+    
+    size = SIZE_SMALL;
+    sizeExtraName = "";
+    size = SIZE_KAGGLE;
+    sizeExtraName = "-kaggle";
+    
     for (String input : interesting) {
-        DrawBoardImage dbi = new DrawBoardImage(input);
+        DrawBoardImage dbi = new DrawBoardImage(input, size);
         dbi.setSize(dbi.getPreferredSize());
-        dbi.saveImage(new File("build/" + input + ".png"));
+        dbi.saveImage(new File("build/" + input + sizeExtraName + ".png"));
     }
   }
 }

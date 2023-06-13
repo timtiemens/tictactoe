@@ -1,6 +1,7 @@
 package com.tiemens.tictactoe.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -172,6 +173,7 @@ public class Board {
         for (int i = 0, n = cellList.size(); i < n; i++) {
             cellList.set(i, CellValue.EMPTY);
         }
+        clearKeyCache();
     }
     public String toStringState() {
         return toStringState(" ", "\n");
@@ -247,6 +249,7 @@ public class Board {
         int index = rowcol.getIndex();
         recordTurn(index);
         cellList.set(index, cellValue);
+        clearKeyCache();
     }
     private void recordTurn(int index) {
         turns.add(index);
@@ -610,7 +613,6 @@ public class Board {
         private String key;
 
         public KeyBoardState(String key) {
-            super();
             this.key = key;
         }
 
@@ -642,12 +644,13 @@ public class Board {
         }        
     } // KeyBoardState
     
-    public static class KeyTurnIndex {
-        private String key;
+    public static class KeyTurnIndex implements Comparable<KeyTurnIndex> {
+        private final String key;
+        private final int count;
 
         public KeyTurnIndex(String key) {
-            super();
             this.key = key;
+            this.count = key.length();
         }
 
         @Override
@@ -671,21 +674,62 @@ public class Board {
         public String toString() {
             return key;
         }        
-    } // KeyBoardState
+        @Override
+        public int compareTo(KeyTurnIndex other) {
+            return this.toString().compareTo(other.toString());
+        }  
+        public List<String> toList(Integer pad) {
+            List<String> unpadded = Arrays.asList(key.split(""));
+        
+            if (pad == null) {
+                return unpadded;
+            } else {
+                List<String> padded = new ArrayList<>();
+                padded.addAll(unpadded);
+                for (int i = 0, n = 9 - padded.size(); i < n; i++) {
+                    padded.add("-");
+                }
+                return padded;
+            }
+        }
+        public List<String> toList(List<String> preList) {
+            List<String> ret = new ArrayList<>();
+            ret.addAll(preList);
+            ret.addAll(toList(9));
+            return ret;
+        }
+
+        public String getCount() {
+            return "" + count;
+        }
+    } // KeyTurnIndex
+    
+    private KeyBoardState keyBoardState = null;
+    private KeyTurnIndex keyTurnIndex = null;
     
     public KeyBoardState getKeyBoardState() {
-        StringBuilder sb = new StringBuilder();
-        for (CellValue cellValue: cellList) {
-            sb.append(cellValue.getSymbol());
+        if (keyBoardState == null) {
+            StringBuilder sb = new StringBuilder();
+            for (CellValue cellValue: cellList) {
+                sb.append(cellValue.getSymbol());
+            }
+            keyBoardState = new KeyBoardState(sb.toString());
         }
-        return new KeyBoardState(sb.toString());
+        return keyBoardState;  // race
     }
     public KeyTurnIndex getKeyTurnIndex() {
-        StringBuilder sb = new StringBuilder();
-        for (Integer turn : turns) {
-            sb.append("" + turn);
+        if (keyTurnIndex == null) {
+            StringBuilder sb = new StringBuilder();
+            for (Integer turn : turns) {
+                sb.append("" + turn);
+            }
+            keyTurnIndex = new KeyTurnIndex(sb.toString());
         }
-        return new KeyTurnIndex(sb.toString());        
+        return keyTurnIndex; // race
+    }
+    public void clearKeyCache() {
+        keyBoardState = null;
+        keyTurnIndex = null;
     }
 }
 

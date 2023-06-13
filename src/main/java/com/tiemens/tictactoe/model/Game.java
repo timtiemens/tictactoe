@@ -167,6 +167,23 @@ public class Game {
          // return CellValue or String:
          return this.gameWinner;
      }
+     public String getGameWinnerString() {
+         final String ret;
+         Object gw = getGameWinner();
+         if (gw == null) {
+             ret = "error";
+         } else if (gw.equals("NONE")) {
+             ret = "drawn";
+         } else if (gw.equals(CellValue.X)) {
+             ret = "win-x";
+         } else if (gw.equals(CellValue.O)) {
+             ret = "win-o";
+         } else {
+             ret = "progerror";
+         }
+         return ret;
+     }
+
         
      public void printState() {
          printState(System.out);
@@ -184,15 +201,18 @@ public class Game {
         return currentPlayer;
     }
 
-    public String toKaggleCsvLine() {
-        String quote = "\"";
+    public String toKaggleCsvLine(boolean includeQuotes, String quote) {
         
         // List<> of 9 CellValues and 1 String
         List<Object> board_array = getBoard().toBoardStateKaggleCsv(CellValue.X);
         
         List<String> board_array_quotes = new ArrayList<>();
-        // surround with "s
-        board_array.forEach( item -> board_array_quotes.add(quote + item.toString() + quote));
+        if (includeQuotes) {
+            // surround with "s
+            board_array.forEach( item -> board_array_quotes.add(quote + item.toString() + quote));
+        } else {
+            board_array.forEach( item -> board_array_quotes.add(item.toString()));
+        }
         // combine with ","
         String line = String.join(",", board_array_quotes);
         
@@ -202,6 +222,15 @@ public class Game {
         // TODO Auto-generated method stub
         return line;
     }
+
+    public int compareTo(Game other) {
+        int ret = this.getBoard().getKeyBoardState().compareTo(other.getBoard().getKeyBoardState());
+        if (ret == 0) {
+            ret = this.getBoard().getKeyTurnIndex().compareTo(other.getBoard().getKeyTurnIndex());
+        }
+        return ret;
+    }
+
 
 
 }
